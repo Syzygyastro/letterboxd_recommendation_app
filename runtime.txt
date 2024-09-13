@@ -1,1 +1,1 @@
-python-3.10.8  # Adjust to your Python version
+python-3.12.6  # Adjust to your Python version
