@@ -26,6 +26,7 @@ CORS(app)
 
 # Function to fetch poster URL from TMDb
 def get_movie_poster(movie_slug):
+    print(f"TMDb API Key: {tmdb_api_key}")  # Add this to your app temporarily
     movie_slug = re.sub(r'-\d{4}$', '', movie_slug)
     print(movie_slug)
     search_result = movie.search(movie_slug.replace('-', ' '))
