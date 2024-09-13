@@ -1,1 +1,1 @@
-python-3.10.15  # Adjust to your Python version
+python-3.10.15
