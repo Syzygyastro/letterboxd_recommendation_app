@@ -1,3 +1,4 @@
+# scrape_top_usernames.py
 import time
 import requests
 from bs4 import BeautifulSoup
@@ -23,16 +24,14 @@ def scrape_single_page(page_number):
     return usernames
 
 # Function to scrape multiple pages concurrently, skipping failed pages
-def scrape_top_users_concurrently(num_users=100, max_workers=10):
-    users = []
+def scrape_top_users_concurrently(num_users, max_workers):
+    users = set()  # Use a set to avoid duplicates
     page_number = 1
 
     # Continue scraping until we have enough users
     while len(users) < num_users:
-        # Create a batch of page numbers to scrape concurrently
         pages_to_scrape = list(range(page_number, page_number + max_workers))
 
-        # Use ThreadPoolExecutor to scrape multiple pages concurrently
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(scrape_single_page, page): page for page in pages_to_scrape}
 
@@ -40,25 +39,19 @@ def scrape_top_users_concurrently(num_users=100, max_workers=10):
                 try:
                     page_users = future.result()
                     if page_users:
-                        users.extend(page_users)
-                    # Stop early if we reach the desired number of users
+                        users.update(page_users)  # Add users, using set to avoid duplicates
+
+                    # If we have enough users, stop collecting more
                     if len(users) >= num_users:
+                        users = set(list(users)[:num_users])  # Ensure we don't have more than num_users
                         break
                 except Exception as exc:
                     print(f"Error processing page: {exc}")
 
-        # Update page_number for the next batch of pages
         page_number += max_workers
 
-    return users
+    return list(users)  # Return exactly the number of users you need
 
-# start_time = time.time()
-# top_users = scrape_top_users_concurrently(1000)
-# end_time = time.time()
-# print(f"Concurrent Execution Time: {end_time - start_time:.2f} seconds")
 
-# start_time = time.time()
-# top_users = scrape_top_users_concurrently(100, max_workers=1)
-# end_time = time.time()
+# print(len(scrape_top_users_concurrently(num_users=100, max_workers=1)))
 
-# print(f"Single Thread Execution Time: {end_time - start_time:.2f} seconds")

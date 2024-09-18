@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import concurrent.futures
 
+from scrape_top_usernames import scrape_top_users_concurrently
+
 # Function to scrape a single page of a user's movie ratings
 def scrape_user_ratings_from_page(username, page_number):
     url = f'https://letterboxd.com/{username}/films/ratings/page/{page_number}/'
@@ -63,6 +65,7 @@ def scrape_user_ratings(username):
 # Function to scrape ratings for multiple users concurrently
 def scrape_ratings_for_users_concurrently(usernames, max_workers=10):
     all_ratings = []
+    n = 0
 
     # Use ThreadPoolExecutor to scrape ratings for multiple users concurrently
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -72,6 +75,8 @@ def scrape_ratings_for_users_concurrently(usernames, max_workers=10):
             try:
                 user_ratings = future.result()
                 if user_ratings:
+                    n += 1
+                    print(n)
                     all_ratings.extend(user_ratings)
             except Exception as exc:
                 print(f"Error processing user: {exc}")
@@ -83,6 +88,14 @@ def save_ratings_to_csv(df_all_ratings, filename='letterboxd_user_ratings.csv'):
     print(f"Scraped ratings saved to '{filename}'")
 
 # Test
-usernames = ['deathproof', 'jay', 'kurstboy']  # Replace with actual scraped usernames
-df_all_ratings = scrape_ratings_for_users_concurrently(usernames, max_workers=10)
+# Step 1: Scrape top users
+print("Scraping top users...")
+top_users = scrape_top_users_concurrently(num_users=10, max_workers=2)
+print(f"Found {len(top_users)} top users.")
+
+# Step 2: Scrape ratings for those top users
+print("Scraping ratings for top users...")
+df_all_ratings = scrape_ratings_for_users_concurrently(top_users, max_workers=2)
+
+# Step 3: Save ratings to CSV
 save_ratings_to_csv(df_all_ratings)
