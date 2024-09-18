@@ -9,9 +9,10 @@ import re
 # Import the scraping function from scrape_user_ratings.py
 from scrape_top_user_ratings import scrape_user_ratings
 
-# Load environment variables from .env file
-load_dotenv()
-
+# Only load environment variables from .env file if not in production
+if os.environ.get('FLASK_ENV') != 'production':
+    load_dotenv()
+    
 # Access the TMDB_API_KEY environment variable
 tmdb_api_key = os.getenv('TMDB_API_KEY')
 tmdb = TMDb()
@@ -21,16 +22,16 @@ movie = Movie()
 # Load the existing ratings dataset (1000 users)
 df_ratings = pd.read_csv('letterboxd_user_ratings.csv')
 
-app = Flask(__name__)
+app = Flask(__name__) 
 CORS(app)
 
 # Function to fetch poster URL from TMDb
 def get_movie_poster(movie_slug):
-    print(f"TMDb API Key: {tmdb_api_key}")  # Add this to your app temporarily
+    # print(f"TMDb API Key: {tmdb_api_key}")  # Add this to your app temporarily
     movie_slug = re.sub(r'-\d{4}$', '', movie_slug)
-    print(movie_slug)
+    # print(movie_slug)
     search_result = movie.search(movie_slug.replace('-', ' '))
-    print(search_result)
+    # print(search_result)
     if search_result and len(search_result) > 0:
         poster_path = search_result[0].poster_path
         return f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None
@@ -49,7 +50,6 @@ def train_combined_model(user_ratings_df):
     trainset = data.build_full_trainset()
     svd_model = SVD()
     svd_model.fit(trainset)
-
     return svd_model
 
 # Function to generate recommendations using the trained model
@@ -74,6 +74,7 @@ def get_recommendations_for_user(user_ratings_df, model, n=5):
 
 @app.route('/recommend', methods=['POST'])
 def recommend():
+    print("Request received!")
     data = request.get_json()
     username = data.get('username')
 
@@ -101,4 +102,4 @@ def recommend():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
