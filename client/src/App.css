@@ -1,38 +1,106 @@
-.App {
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap'); /* Importing a nice Google font */
+
+/* Base styles */
+body {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  background-color: #121212; /* Dark background */
+  color: #e0e0e0; /* Light text for contrast */
+}
+
+.app-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.title {
+  font-size: 2.5rem;
+  color: #ff9800; /* A warm orange for the title */
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.subtitle {
+  font-size: 1.5rem;
+  color: #ffcc80; /* A lighter orange for subtitles */
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.form {
+  margin-bottom: 20px;
+}
+
+.input {
+  padding: 10px;
+  margin-right: 10px;
+  width: 250px;
+  border-radius: 4px;
+  border: none;
+  font-size: 16px;
+}
+
+.button {
+  padding: 10px 20px;
+  cursor: pointer;
+  background-color: #ff9800;
+  border: none;
+  border-radius: 4px;
+  color: #121212; /* Dark text for contrast */
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.button:hover {
+  background-color: #ffb74d;
+}
+
+.loading,
+.error {
+  color: #ff5252; /* Red for errors */
+  font-weight: bold;
+}
+
+.recommendation-list {
+  list-style: none;
+  padding: 0;
+}
+
+.recommendation-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  margin-bottom: 20px;
 }
 
-.App-link {
-  color: #61dafb;
+.movie-link {
+  margin-right: 20px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.movie-poster {
+  width: 100px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.movie-details {
+  text-align: left;
+}
+
+.movie-title {
+  text-decoration: none;
+  color: #ff9800;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.movie-title:hover {
+  text-decoration: underline;
+}
+
+.movie-rating {
+  margin: 0;
+}
+
+.no-recommendations {
+  color: #e0e0e0;
+  font-style: italic;
 }

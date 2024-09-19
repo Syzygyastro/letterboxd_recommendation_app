@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import './App.css'; // Import the CSS file for styling
+
 // Determine base URL based on environment
 const BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://letterboxd-reccomendation-app-93739ce42474.herokuapp.com'  // Heroku URL for production
@@ -27,9 +29,9 @@ function App() {
   };
 
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px' }}>
-      <h1>Letterboxd Movie Recommendations</h1>
-      <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
+    <div className="app-container">
+      <h1 className="title">Letterboxd Movie Recommendations</h1>
+      <form onSubmit={handleSubmit} className="form">
         <label htmlFor="username">Enter your Letterboxd Username: </label>
         <input
           type="text"
@@ -37,32 +39,32 @@ function App() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required
-          style={{ padding: '10px', marginRight: '10px', width: '250px' }}
+          className="input"
         />
-        <button type="submit" style={{ padding: '10px 20px', cursor: 'pointer' }}>Get Recommendations</button>
+        <button type="submit" className="button">Get Recommendations</button>
       </form>
 
-      {loading && <p>Loading recommendations...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {loading && <p className="loading">Loading recommendations...</p>}
+      {error && <p className="error">{error}</p>}
 
-      <h2>Movie Recommendations</h2>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+      <h2 className="subtitle">Movie Recommendations</h2>
+      <ul className="recommendation-list">
         {recommendations.length > 0 ? (
           recommendations.map((movie, index) => (
-            <li key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-              <a href={`https://letterboxd.com/film/${movie.slug}/`} target="_blank" rel="noopener noreferrer" style={{ marginRight: '20px' }}>
-                <img src={movie.poster_url} alt={movie.slug} style={{ width: '100px', height: '150px', objectFit: 'cover' }} />
+            <li key={index} className="recommendation-item">
+              <a href={`https://letterboxd.com/film/${movie.slug}/`} target="_blank" rel="noopener noreferrer" className="movie-link">
+                <img src={movie.poster_url} alt={movie.slug} className="movie-poster" />
               </a>
-              <div>
-                <a href={`https://letterboxd.com/film/${movie.slug}/`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'black', fontSize: '18px', fontWeight: 'bold' }}>
+              <div className="movie-details">
+                <a href={`https://letterboxd.com/film/${movie.slug}/`} target="_blank" rel="noopener noreferrer" className="movie-title">
                   {movie.slug.replaceAll('-', ' ')}
                 </a>
-                <p style={{ margin: 0 }}>Predicted Rating: {movie.rating.toFixed(1)}</p>
+                <p className="movie-rating">Predicted Rating: {movie.rating.toFixed(1)}</p>
               </div>
             </li>
           ))
         ) : (
-          <p>No recommendations yet.</p>
+          <p className="no-recommendations">No recommendations yet.</p>
         )}
       </ul>
     </div>
