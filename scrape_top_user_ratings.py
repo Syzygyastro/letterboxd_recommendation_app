@@ -1,23 +1,26 @@
 # scrape_user_ratings.py
-import requests
-from bs4 import BeautifulSoup
+import os
+import time
+import aiohttp
+import asyncio
 import pandas as pd
-import concurrent.futures
+from bs4 import BeautifulSoup
 
 from scrape_top_usernames import scrape_top_users_concurrently
 
-# Function to scrape a single page of a user's movie ratings
-def scrape_user_ratings_from_page(username, page_number):
-    url = f'https://letterboxd.com/{username}/films/ratings/page/{page_number}/'
+# Function to scrape a single page of a user's movie ratings asynchronously
+async def scrape_user_ratings_from_page(session, username, page_number):
+    url = f'https://letterboxd.com/{username}/films/page/{page_number}/'
     try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-    except (requests.RequestException, requests.Timeout) as e:
+        async with session.get(url, timeout=5) as response:
+            response.raise_for_status()
+            html = await response.text()
+    except Exception as e:
         print(f"Failed to retrieve ratings for user {username} on page {page_number}: {e}")
         return []
 
     # Parse the HTML content
-    soup = BeautifulSoup(response.content, 'html.parser')
+    soup = BeautifulSoup(html, 'html.parser')
     poster_containers = soup.find_all('li', class_='poster-container')
 
     if not poster_containers:
@@ -38,6 +41,7 @@ def scrape_user_ratings_from_page(username, page_number):
                 'rating': convert_rating_to_numeric(rating)
             })
 
+    # print(f"Finished scraping page {page_number} for user {username}")
     return user_ratings
 
 # Helper function to convert the Letterboxd rating stars to numeric value
@@ -48,54 +52,89 @@ def convert_rating_to_numeric(rating_str):
     }
     return star_mapping.get(rating_str, 0)
 
-# Function to scrape all pages of a user's ratings
-def scrape_user_ratings(username):
-    all_ratings = []
-    page_number = 1
+# Function to scrape all pages of a user's ratings asynchronously
+async def scrape_user_ratings(session, username, semaphore, max_pages=10):
+    print(f"Started scraping ratings for user {username}")
 
-    while True:
-        page_ratings = scrape_user_ratings_from_page(username, page_number)
-        if not page_ratings:
-            break  # No more ratings on the next page, exit loop
-        all_ratings.extend(page_ratings)
-        page_number += 1  # Move to the next page
+    # Create a list of tasks to scrape each page concurrently
+    tasks = []
+    for page_number in range(1, max_pages + 1):
+        task = scrape_user_ratings_from_page(session, username, page_number)
+        tasks.append(task)
+
+    # Run the tasks concurrently with semaphore limits
+    async with semaphore:
+        pages_ratings = await asyncio.gather(*tasks)
+
+    # Flatten the list of ratings from all pages
+    all_ratings = [rating for page_ratings in pages_ratings if page_ratings for rating in page_ratings]
+
+    if not all_ratings:
+        print(f"Finished all pages for user {username} (no ratings found).")
+    else:
+        print(f"Finished scraping all ratings for user {username}.")
 
     return all_ratings
 
-# Function to scrape ratings for multiple users concurrently
-def scrape_ratings_for_users_concurrently(usernames, max_workers=10):
+# Function to scrape ratings for multiple users asynchronously with max_workers (semaphore)
+async def scrape_ratings_for_users_concurrently(usernames, max_workers=10):
     all_ratings = []
-    n = 0
+    semaphore = asyncio.Semaphore(max_workers)  # Limit concurrency
 
-    # Use ThreadPoolExecutor to scrape ratings for multiple users concurrently
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(scrape_user_ratings, username): username for username in usernames}
+    async with aiohttp.ClientSession() as session:
+        tasks = [scrape_user_ratings(session, username, semaphore) for username in usernames]
+        results = await asyncio.gather(*tasks)
 
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                user_ratings = future.result()
-                if user_ratings:
-                    n += 1
-                    print(n)
-                    all_ratings.extend(user_ratings)
-            except Exception as exc:
-                print(f"Error processing user: {exc}")
+        for user_ratings in results:
+            if user_ratings:
+                print(f"Finished scraping ratings for user {user_ratings[0]['username']}")
+                all_ratings.extend(user_ratings)
 
     return pd.DataFrame(all_ratings)
 
+# Function to save ratings to CSV
 def save_ratings_to_csv(df_all_ratings, filename='letterboxd_user_ratings.csv'):
+    i = 1
+    while os.path.exists(filename):
+        filename = f'letterboxd_user_ratings_{i}.csv'
+        i += 1
     df_all_ratings.to_csv(filename, index=False)
     print(f"Scraped ratings saved to '{filename}'")
 
-# Test
-# Step 1: Scrape top users
-print("Scraping top users...")
-top_users = scrape_top_users_concurrently(num_users=10, max_workers=2)
-print(f"Found {len(top_users)} top users.")
+# Test function to scrape top users and their ratings, then save to CSV
+async def main():
+    # Step 1: Scrape top users
+    print("Scraping top users...")
+    top_users = await scrape_top_users_concurrently(num_users=100, max_workers=10)
+    print(f"Found {len(top_users)} top users.")
 
-# Step 2: Scrape ratings for those top users
-print("Scraping ratings for top users...")
-df_all_ratings = scrape_ratings_for_users_concurrently(top_users, max_workers=2)
+    # # Step 2: Scrape ratings for those top users
+    # print("Scraping ratings for top users...")
+    # df_all_ratings = await scrape_ratings_for_users_concurrently(top_users, max_workers=5)
+    # print(f"Scraped a total of {len(df_all_ratings)}")
+    
+    # Step 3: Save ratings to CSV using the reusable function
+    # save_ratings_to_csv(df_all_ratings)
+    
+    #Time comparison between 1 worker and 5 workers
+    # start_time = time.time()
+    # df_all_ratings = await scrape_ratings_for_users_concurrently(top_users, max_workers=4)
+    # elapsed_time = time.time() - start_time
+    # print(f"Scraped a total of {len(df_all_ratings)} ratings using worker in {elapsed_time:.2f} seconds")
+    
+    start_time = time.time()
+    df_all_ratings = await scrape_ratings_for_users_concurrently(top_users, max_workers=10)
+    elapsed_time = time.time() - start_time
+    print(f"Scraped a total of {len(df_all_ratings)} ratings using 20 workers in {elapsed_time:.2f} seconds")
 
-# Step 3: Save ratings to CSV
-save_ratings_to_csv(df_all_ratings)
+    # start_time = time.time()
+    # df_all_ratings = await scrape_ratings_for_users_concurrently(top_users, max_workers=50)
+    # elapsed_time = time.time() - start_time
+    # print(f"Scraped a total of {len(df_all_ratings)} ratings using 50 workers in {elapsed_time:.2f} seconds")
+       
+    await asyncio.sleep(0.250)
+
+# Running the async scraping task
+if __name__ == "__main__":
+    asyncio.run(main())
+
