@@ -34,8 +34,6 @@ async def scrape_watched_movies_from_page(session, username, page_number):
         # Check if the movie is watched, rated, or hearted
         if film_slug:
             watched_movies.append(film_slug)
-
-    print(f"Finished scraping page {page_number} for user {username}")
     return watched_movies
 
 # Function to scrape all pages of a user's watched movies asynchronously
@@ -89,7 +87,6 @@ async def scrape_user_ratings_from_page(session, username, page_number):
         rating_tag = poster.find('span', class_='rating')
         rating = rating_tag.text.strip() if rating_tag else "No rating"
         hearted = poster.find('span', class_='like')  # Check if the movie is hearted
-        print("is hearted:", hearted)
         if film_slug:
             if rating != "No rating":
                 # Movie has a rating, include it

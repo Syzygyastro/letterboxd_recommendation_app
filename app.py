@@ -61,10 +61,7 @@ def get_recommendations_for_user(user_ratings_df, watched_movies, model, n=5):
     # Get all movie slugs from the combined dataset (i.e., top 1000 users' data)
     all_movie_ids = df_ratings['movie_slug'].unique()
     # Get the list of movies the user has watched
-    watched_movie_set = set(watched_movies)
-    # Get the list of movies the user has already rated
-    rated_movies = user_ratings_df['movie_slug'].unique()
-
+    watched_movie_set = set(watched_movies)    
     # Filter out movies the user has already watched
     movies_to_predict = [movie for movie in all_movie_ids if movie not in watched_movie_set]
 
@@ -83,19 +80,20 @@ async def recommend():
     data = request.get_json()
     username = data.get('username')
 
-    # Scrape all the user's ratings (using the imported function)
-    user_ratings = await scrape_user_ratings(username)
-    user_ratings_df = pd.DataFrame(user_ratings)
-
-    if user_ratings_df is None or user_ratings_df.empty:
-        return jsonify({"error": "Could not scrape user data or user has no ratings."}), 404
-
-    # Scrape all the user's watched movies (rated, hearted, or just watched)
+    # Create a semaphore and session for concurrent scraping
     semaphore = asyncio.Semaphore(5)
     async with aiohttp.ClientSession() as session:
-        watched_movies = await scrape_all_watched_movies(session, username, semaphore, max_pages=10)
-    if not watched_movies:
-        return jsonify({"error": "Could not scrape watched movies or user has no watched movies."}), 404
+        # Scrape all the user's ratings (using the imported function)
+        user_ratings = await scrape_user_ratings(session, username, semaphore)
+        user_ratings_df = pd.DataFrame(user_ratings)
+
+        if user_ratings_df is None or user_ratings_df.empty:
+            return jsonify({"error": "Could not scrape user data or user has no ratings."}), 404
+
+        # Scrape all the user's watched movies (rated, hearted, or just watched)
+        watched_movies = await scrape_all_watched_movies(session, username, semaphore, max_pages=20)
+        if not watched_movies:
+            return jsonify({"error": "Could not scrape watched movies or user has no watched movies."}), 404
     
     await asyncio.sleep(0.250)
     
