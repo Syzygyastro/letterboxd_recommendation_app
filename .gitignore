@@ -1,0 +1,16 @@
+# Ignore .env file for sensitive environment variables
+.env
+
+# Ignore Python cache and virtual environment directories
+__pycache__/
+venv/
+
+# Ignore Node.js dependencies (if you're using Node.js)
+node_modules/
+
+# Ignore production build of React (if deploying the build separately)
+build/
+
+# Ignore OS-specific files
+.DS_Store  # macOS
+Thumbs.db  # Windows
